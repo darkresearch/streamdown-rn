@@ -4,7 +4,7 @@
   "author": "Edgar Pavlovsky <edgar@darkresearch.ai>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/darkresearch/streamdown-rn.git"
+    "url": "git+https://github.com/darkresearch/streamdown-rn.git"
   },
   "homepage": "https://github.com/darkresearch/streamdown-rn#readme",
   "bugs": {
