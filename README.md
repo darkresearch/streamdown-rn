@@ -250,11 +250,18 @@ bun run type-check
 
 ## Contributing
 
+We use [Changesets](https://github.com/changesets/changesets) for version management (same as Vercel's Streamdown).
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+4. Add a changeset: `bun run changeset`
+5. Commit your changes with the changeset file
+6. Submit a pull request
+
+When your PR is merged, GitHub Actions will automatically create a "Version Packages" PR. When that PR is merged, your changes will be published to npm!
+
+See [RELEASING.md](RELEASING.md) for detailed release process documentation.
 
 ## License
 

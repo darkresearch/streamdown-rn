@@ -1,57 +1,48 @@
-name: Publish to npm
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
-  publish:
-    name: Publish to npm
+  release:
+    name: Release
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
+      - name: Checkout Repo
         uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           registry-url: 'https://registry.npmjs.org'
-      
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-      
-      - name: Type check
-        run: bun run type-check
-      
-      - name: Build
-        run: bun run build
-      
-      - name: Verify package structure
-        run: |
-          if [ ! -f "dist/index.js" ]; then
-            echo "Error: dist/index.js not found"
-            exit 1
-          fi
-          if [ ! -f "dist/index.d.ts" ]; then
-            echo "Error: dist/index.d.ts not found"
-            exit 1
-          fi
-          echo "✓ Package structure verified"
-      
-      - name: Publish to npm
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: bun run release
+          version: bun run version
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
