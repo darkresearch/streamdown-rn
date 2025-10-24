@@ -5,11 +5,8 @@
  * inspired by Vercel's Streamdown but built specifically for React Native.
  */
 
-// @ts-nocheck - Suppress React version mismatch errors in monorepo
-
 import React, { useMemo, useCallback } from 'react';
 import { View, Text } from 'react-native';
-import Markdown from 'react-native-markdown-display';
 
 import { StreamdownRNProps, ThemeConfig, ComponentInstance } from './core/types';
 import { optimizeForStreaming } from './core/parseIncomplete';
@@ -27,10 +24,10 @@ function getTheme(theme: StreamdownRNProps['theme']): {
   markdownStyles: any;
 } {
   if (typeof theme === 'object') {
-    // Custom theme object
+    // Custom theme object - uses dark styles as base
     return {
       config: theme,
-      markdownStyles: darkMarkdownStyles, // TODO: Generate styles from custom theme
+      markdownStyles: darkMarkdownStyles,
     };
   }
   
@@ -91,7 +88,7 @@ export const StreamdownRN: React.FC<StreamdownRNProps> = React.memo(({
   }, [children, componentRegistry, onComponentError]);
 
   // Get theme configuration
-  const { config: themeConfig, markdownStyles } = useMemo(() => {
+  const { markdownStyles } = useMemo(() => {
     return getTheme(theme);
   }, [theme]);
 
@@ -132,7 +129,7 @@ export const StreamdownRN: React.FC<StreamdownRNProps> = React.memo(({
       );
 
       // Custom inline code renderer to intercept component markers
-      rules.code_inline = (node: any, children: any, parent: any, styles: any) => {
+      rules.code_inline = (node: any, _children: any, _parent: any, styles: any) => {
         const codeContent = node.content || '';
         
         console.log('💻 code_inline rule triggered:', {
@@ -164,7 +161,7 @@ export const StreamdownRN: React.FC<StreamdownRNProps> = React.memo(({
       };
 
       // Custom paragraph renderer that keeps components inline
-      rules.paragraph = (node: any, children: any, parent: any, styles: any) => {
+      rules.paragraph = (node: any, children: any, _parent: any, styles: any) => {
         // DEBUG: Log what we receive
         console.log('📝 Paragraph rule triggered:', {
           nodeContent: node.content?.substring(0, 200),
@@ -256,7 +253,7 @@ export const StreamdownRN: React.FC<StreamdownRNProps> = React.memo(({
     }
 
     // Custom code block renderer
-    rules.fence = (node: any, children: any, parent: any, styles: any) => {
+    rules.fence = (node: any, _children: any, _parent: any, _styles: any) => {
       const language = node.sourceInfo || '';
       const code = node.content || '';
       const currentTheme = typeof theme === 'string' ? theme : 'dark';
@@ -290,7 +287,6 @@ export const StreamdownRN: React.FC<StreamdownRNProps> = React.memo(({
     componentsCount: processedContent.components.length
   });
 
-  // @ts-ignore - React version mismatch in monorepo
   return (
     <View style={[{ flex: 1 }, style]}>
       <MarkdownRenderer
