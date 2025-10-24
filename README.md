@@ -7,24 +7,26 @@ A React Native streaming markdown renderer inspired by [Vercel's Streamdown](htt
 🚀 **Streaming-first** - Handles incomplete markdown gracefully during AI response streaming  
 🔌 **Component registry** - Dynamic component injection via pluggable registry system  
 📱 **Mobile-optimized** - Built specifically for React Native performance  
-⚡ **Advanced features** - Math rendering, syntax highlighting, Mermaid diagrams  
 🎨 **Themeable** - Built-in dark/light theme support  
-🔢 **Math equations** - LaTeX rendering with react-native-math-view  
-📊 **Mermaid diagrams** - Interactive flowcharts, sequence diagrams, and more  
 🎯 **Syntax highlighting** - Beautiful code blocks with copy-to-clipboard  
 
 ## Why StreamdownRN?
 
 Traditional markdown renderers break when you stream incomplete content from AI models. StreamdownRN is built specifically for this use case, handling partial formatting gracefully and providing smooth real-time rendering.
 
+Inspired by [Vercel's Streamdown](https://github.com/vercel/streamdown) for React web, StreamdownRN brings the same streaming-first philosophy to React Native with mobile-optimized performance.
+
 ## Installation
 
+```bash
+bun add streamdown-rn
+```
+
+Or with npm/yarn:
 ```bash
 npm install streamdown-rn
 # or
 yarn add streamdown-rn
-# or
-bun add streamdown-rn
 ```
 
 ## Usage
@@ -163,29 +165,7 @@ The price has been **trending upward** recently.
 </StreamdownRN>
 ```
 
-### Advanced Features
-
-**Math Equations:**
-```typescript
-const mathContent = `
-# Mathematical Analysis
-
-The compound interest formula is: $A = P(1 + r/n)^{nt}$
-
-For continuous compounding:
-
-$$A = Pe^{rt}$$
-
-Where:
-- $P$ = principal amount
-- $r$ = annual interest rate
-- $t$ = time in years
-`;
-
-<StreamdownRN>{mathContent}</StreamdownRN>
-```
-
-**Code Syntax Highlighting:**
+### Code Syntax Highlighting
 ```typescript
 const codeContent = `
 # Smart Contract Example
@@ -210,56 +190,34 @@ contract SimpleToken {
 <StreamdownRN>{codeContent}</StreamdownRN>
 ```
 
-**Mermaid Diagrams:**
-```typescript
-const diagramContent = `
-# DeFi Protocol Flow
+## Roadmap
 
-\`\`\`mermaid
-graph TD
-    A[User] --> B[Connect Wallet]
-    B --> C[Select Token]
-    C --> D[Approve Transaction]
-    D --> E[Execute Swap]
-    E --> F[Receive Tokens]
-    F --> G[Update Balance]
-\`\`\`
+Features planned for future releases:
 
-\`\`\`mermaid
-sequenceDiagram
-    participant User
-    participant DApp
-    participant Blockchain
-    
-    User->>DApp: Initiate Transaction
-    DApp->>Blockchain: Submit Transaction
-    Blockchain-->>DApp: Transaction Hash
-    DApp-->>User: Confirmation
-\`\`\`
-`;
-
-<StreamdownRN>{diagramContent}</StreamdownRN>
-```
+- [ ] **Math equations** - LaTeX rendering with KaTeX or react-native-math-view
+- [ ] **Mermaid diagrams** - Interactive flowcharts, sequence diagrams, and more
+- [ ] **GitHub Flavored Markdown** - Tables, task lists, strikethrough
+- [ ] **Custom markdown rules** - Plugin system for extending functionality
+- [ ] **Accessibility** - Screen reader support and ARIA labels
 
 ## Development
 
 ### Building
 
 ```bash
-cd packages/streamdown-rn
-npm run build
+bun run build
 ```
 
 ### Testing
 
 ```bash
-npm test
+bun test
 ```
 
 ### Type Checking
 
 ```bash
-npm run type-check
+bun run type-check
 ```
 
 ## Contributing

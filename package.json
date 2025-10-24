@@ -1,7 +1,7 @@
 {
   "name": "streamdown-rn",
   "version": "0.1.0",
-  "author": "Dark Team",
+  "author": "Edgar Pavlovsky <edgar@darkresearch.ai>",
   "repository": {
     "type": "git",
     "url": "https://github.com/darkresearch/streamdown-rn.git"
