@@ -259,7 +259,7 @@ We use [Changesets](https://github.com/changesets/changesets) for version manage
 5. Commit your changes with the changeset file
 6. Submit a pull request
 
-When your PR is merged, GitHub Actions will automatically create a "Version Packages" PR. When that PR is merged, your changes will be published to npm!
+When your PR is merged, GitHub Actions will automatically create a "Version Packages" PR. When that PR is merged, your changes will be published to npm.
 
 See [RELEASING.md](RELEASING.md) for detailed release process documentation.
 
