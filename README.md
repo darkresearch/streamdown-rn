@@ -250,7 +250,7 @@ bun run type-check
 
 ## Contributing
 
-We use [Changesets](https://github.com/changesets/changesets) for version management (same as Vercel's Streamdown).
+We use [Changesets](https://github.com/changesets/changesets) for version management:
 
 1. Fork the repository
 2. Create a feature branch
