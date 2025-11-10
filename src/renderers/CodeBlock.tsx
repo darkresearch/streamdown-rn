@@ -107,6 +107,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, theme }) =
           highlighter="hljs"
           fontSize={13}
           fontFamily="Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace"
+          PreTag={ScrollView}
+          CodeTag={ScrollView}
           customStyle={{
             backgroundColor: 'transparent',
             padding: 16,
