@@ -1,78 +1,39 @@
-# Contributing to StreamdownRN
+# Contributing to streamdown-rn
 
-Thank you for your interest in contributing to StreamdownRN! This document provides guidelines for contributors.
+Thank you for your interest in contributing to streamdown-rn! This document provides guidelines for contributors.
 
 ## Development Setup
 
 ### For External Contributors
 
 1. **Fork the repository** on GitHub:
-   - Click the "Fork" button at https://github.com/darkresearch/streamdown-rn
-   - This creates a copy under your GitHub account
-
-2. **Clone your fork**:
+   
 ```bash
 git clone https://github.com/YOUR-USERNAME/streamdown-rn.git
 cd streamdown-rn
 ```
 
-3. **Add upstream remote** (to sync with the main repo):
-```bash
-git remote add upstream https://github.com/darkresearch/streamdown-rn.git
-```
-
-4. **Install dependencies**:
+2. **Install dependencies**:
 ```bash
 bun install
 ```
 
-### For Maintainers
-
-If you have write access to the repository, you can clone directly:
-
+3. **Build the package:**
 ```bash
-git clone https://github.com/darkresearch/streamdown-rn.git
-cd streamdown-rn
-bun install
+bun run build
 ```
 
-3. Run type checking:
+5. **Run type checks:**
 ```bash
-npm run type-check
-```
-
-4. Build the package:
-```bash
-npm run build
-```
-
-## Development Workflow
-
-### Making Changes
-
-1. Create a branch from `main`:
-```bash
-git checkout -b feature/your-feature-name
-```
-
-2. Make your changes in the `src/` directory
-
-3. Run type checking to ensure no TypeScript errors:
-```bash
-npm run type-check
-```
-
-4. Build to verify everything compiles:
-```bash
-npm run build
+bun run type-check
 ```
 
 ### Testing
 
 While formal tests are being added, please manually test your changes by:
 
-1. Building the package: `npm run build`
-2. Using `npm link` to test in a React Native project
+1. Building the package: `bun run build`
+2. Using `bun link` to test in a React Native project
 3. Verifying markdown rendering works correctly
 4. Testing with streaming content (incomplete markdown)
 5. Testing dynamic component injection if applicable
@@ -91,32 +52,14 @@ While formal tests are being added, please manually test your changes by:
 2. **Descriptive title** - Clearly state what the PR does
 3. **Description** - Explain the why and how of your changes
 4. **Update README** - If adding features, document them
-5. **Check types** - Ensure `npm run type-check` passes
-
-### Good PR Example
-
-```
-Title: Add support for custom heading styles
-
-Description:
-Adds a new `headingStyles` prop that allows users to customize
-the appearance of markdown headings.
-
-Changes:
-- Add headingStyles prop to StreamdownRN
-- Update theme types to include heading style options
-- Add documentation to README
-- Preserve backward compatibility with default styles
-
-Fixes #42
-```
+5. **Check types** - Ensure `bun run type-check` passes
 
 ## Reporting Issues
 
 When reporting bugs, please include:
 
 - **React Native version**
-- **StreamdownRN version**  
+- **streamdown-rn version**  
 - **Platform** (iOS/Android/Web)
 - **Steps to reproduce**
 - **Expected vs actual behavior**
@@ -133,11 +76,8 @@ We welcome feature requests! Please:
 
 ## Questions?
 
-- Open a GitHub Discussion for questions
-- Check existing issues and PRs
-- Read the README thoroughly
+We operate primarily on Github, so the best way to ask a question or start a discussion is to open a Github issue.
 
 ## License
 
-By contributing to StreamdownRN, you agree that your contributions will be licensed under the Apache License 2.0.
-
+By contributing to streamdown-rn, you agree that your contributions will be licensed under the Apache License 2.0.
