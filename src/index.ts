@@ -35,7 +35,6 @@ export type {
   ThemeConfig,
   ValidationResult,
   JSONSchema,
-  IncompletePatterns,
 } from './core/types';
 
 // Themes

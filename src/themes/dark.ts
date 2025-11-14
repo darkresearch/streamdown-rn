@@ -1,26 +1,42 @@
 /**
- * Dark Theme Configuration
- * Matches the existing Scout app dark theme
+ * GitHub Dark Theme Configuration
+ * Based on GitHub's dark theme color palette
  */
 
 import { ThemeConfig } from '../core/types';
 
 export const darkTheme: ThemeConfig = {
   colors: {
-    text: '#DCE9FF',           // Main text color for better readability
-    background: '#05080C',     // Background matching app
-    border: '#1a1e24',         // Border color matching app
-    link: '#4A9EFF',          // Link color matching app accent
-    code: '#A7BEE6',          // Code text color
-    codeBackground: '#101A29', // Code background matching chat input
-    blockquote: '#4A9EFF',    // Blockquote accent color
-    strong: '#FFFFFF',        // Bold text - slightly brighter
-    emphasis: '#C7D2E8',      // Italic text - slightly dimmed
+    text: '#c9d1d9',           // Main text color
+    background: '#0d1117',     // Background
+    border: '#30363d',         // Border color
+    link: '#58a6ff',          // Link color
+    code: '#c9d1d9',          // Code text color
+    codeBackground: '#161b22', // Code background
+    blockquote: '#8b949e',    // Blockquote accent color
+    strong: '#c9d1d9',        // Bold text
+    emphasis: '#c9d1d9',      // Italic text
+    // Syntax highlighting colors (GitHub Dark)
+    syntaxKeyword: '#ff7b72',  // Red for keywords
+    syntaxString: '#a5d6ff',   // Light blue for strings
+    syntaxNumber: '#79c0ff',   // Blue for numbers
+    syntaxComment: '#8b949e',  // Gray for comments
+    syntaxFunction: '#d2a8ff', // Purple for functions
+    syntaxClass: '#ffa657',    // Orange for classes
+    syntaxOperator: '#ff7b72', // Red for operators
+    syntaxDefault: '#c9d1d9',  // Default text color
+    // Code block UI colors
+    codeBlockBackground: '#161b22',
+    codeBlockBorder: '#30363d',
+    codeBlockHeaderBg: '#0d1117',
+    codeBlockHeaderText: '#8b949e',
+    codeBlockCopyButtonBg: '#21262d',
+    codeBlockCopyButtonText: '#c9d1d9',
   },
   fonts: {
-    body: 'Satoshi',          // Main font matching app
-    code: 'Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',  // Monospace font stack (similar to ChatGPT)
-    heading: 'Satoshi',       // Heading font
+    body: undefined,          // Use system default
+    code: 'monospace',        // System monospace
+    heading: undefined,       // Use system default
   },
   spacing: {
     paragraph: 12,            // Space between paragraphs
@@ -36,7 +52,7 @@ export const darkTheme: ThemeConfig = {
 export const darkMarkdownStyles = {
   body: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.body,
+    ...(darkTheme.fonts.body && { fontFamily: darkTheme.fonts.body }),
     fontSize: 16,
     lineHeight: 22,
     flexWrap: 'wrap' as const,
@@ -44,7 +60,7 @@ export const darkMarkdownStyles = {
   },
   heading1: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.heading,
+    ...(darkTheme.fonts.heading && { fontFamily: darkTheme.fonts.heading }),
     fontSize: 24,
     fontWeight: 'bold' as const,
     marginTop: darkTheme.spacing.heading,
@@ -52,7 +68,7 @@ export const darkMarkdownStyles = {
   },
   heading2: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.heading,
+    ...(darkTheme.fonts.heading && { fontFamily: darkTheme.fonts.heading }),
     fontSize: 20,
     fontWeight: 'bold' as const,
     marginTop: darkTheme.spacing.heading,
@@ -60,7 +76,7 @@ export const darkMarkdownStyles = {
   },
   heading3: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.heading,
+    ...(darkTheme.fonts.heading && { fontFamily: darkTheme.fonts.heading }),
     fontSize: 18,
     fontWeight: 'bold' as const,
     marginTop: darkTheme.spacing.heading,
@@ -68,7 +84,7 @@ export const darkMarkdownStyles = {
   },
   heading4: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.heading,
+    ...(darkTheme.fonts.heading && { fontFamily: darkTheme.fonts.heading }),
     fontSize: 16,
     fontWeight: 'bold' as const,
     marginTop: darkTheme.spacing.heading,
@@ -76,7 +92,7 @@ export const darkMarkdownStyles = {
   },
   heading5: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.heading,
+    ...(darkTheme.fonts.heading && { fontFamily: darkTheme.fonts.heading }),
     fontSize: 14,
     fontWeight: 'bold' as const,
     marginTop: darkTheme.spacing.heading,
@@ -84,7 +100,7 @@ export const darkMarkdownStyles = {
   },
   heading6: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.heading,
+    ...(darkTheme.fonts.heading && { fontFamily: darkTheme.fonts.heading }),
     fontSize: 12,
     fontWeight: 'bold' as const,
     marginTop: darkTheme.spacing.heading,
@@ -92,7 +108,7 @@ export const darkMarkdownStyles = {
   },
   paragraph: {
     color: darkTheme.colors.text,
-    fontFamily: darkTheme.fonts.body,
+    ...(darkTheme.fonts.body && { fontFamily: darkTheme.fonts.body }),
     fontSize: 16,
     lineHeight: 22,
     marginBottom: darkTheme.spacing.paragraph,
@@ -120,7 +136,7 @@ export const darkMarkdownStyles = {
   code_inline: {
     color: darkTheme.colors.text,  // Same as regular text
     backgroundColor: 'transparent',  // No background, blend into chat
-    fontFamily: darkTheme.fonts.code,
+    ...(darkTheme.fonts.code && { fontFamily: darkTheme.fonts.code }),
     fontSize: 14,  // Match body text size
     lineHeight: 22,  // Match body line height
     borderWidth: 0,  // No border
@@ -136,7 +152,7 @@ export const darkMarkdownStyles = {
   code_block: {
     color: darkTheme.colors.code,
     backgroundColor: darkTheme.colors.codeBackground,
-    fontFamily: darkTheme.fonts.code,
+    ...(darkTheme.fonts.code && { fontFamily: darkTheme.fonts.code }),
     fontSize: 13,  // Slightly smaller like ChatGPT
     padding: 12,  // More consistent padding
     borderRadius: 6,  // Slightly tighter radius
@@ -147,12 +163,12 @@ export const darkMarkdownStyles = {
   fence: {
     color: darkTheme.colors.code,
     backgroundColor: darkTheme.colors.codeBackground,
-    fontFamily: darkTheme.fonts.code,
+    ...(darkTheme.fonts.code && { fontFamily: darkTheme.fonts.code }),
     fontSize: 13,  // Slightly smaller like ChatGPT
     padding: 12,  // More consistent padding
     borderRadius: 28,  // Rounder corners like ChatGPT
     borderWidth: 1,
-    borderColor: '#1a2433',  // Barely lighter than background for subtle border
+    borderColor: darkTheme.colors.codeBlockBorder || darkTheme.colors.border,
     marginVertical: 0,  // No extra spacing - CodeBlock handles its own margins
     overflowX: 'auto' as const,
     maxWidth: '100%',

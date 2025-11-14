@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import SyntaxHighlighter from 'react-native-syntax-highlighter';
+import { ThemeConfig } from '../core/types';
 
 interface CodeBlockProps {
   code: string;
   language?: string;
-  theme: 'dark' | 'light';
+  theme: ThemeConfig;
 }
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, theme }) => {
@@ -26,55 +27,35 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, theme }) =
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isDark = theme === 'dark';
-  const backgroundColor = isDark ? '#101A29' : '#f5f5f5';
-  const borderColor = isDark ? '#1a2433' : '#e8e8e8'; // Barely lighter than background
-  const headerBg = isDark ? '#0d1520' : '#ececec';
-  const headerText = isDark ? '#8C9DB8' : '#666666';
-  const copyButtonBg = isDark ? '#1a2433' : '#e0e0e0';
-  const copyButtonText = isDark ? '#DCE9FF' : '#333333';
+  // Use theme colors for all UI elements
+  const backgroundColor = theme.colors.codeBlockBackground || theme.colors.codeBackground;
+  const borderColor = theme.colors.codeBlockBorder || theme.colors.border;
+  const headerBg = theme.colors.codeBlockHeaderBg || theme.colors.codeBackground;
+  const headerText = theme.colors.codeBlockHeaderText || theme.colors.text;
+  const copyButtonBg = theme.colors.codeBlockCopyButtonBg || theme.colors.border;
+  const copyButtonText = theme.colors.codeBlockCopyButtonText || theme.colors.text;
 
-  // GitHub Dark-inspired syntax colors
-  const syntaxStyle = isDark ? {
+  // Syntax highlighting colors from theme
+  const syntaxStyle = {
     'hljs': {
-      color: '#C9D1D9',
+      color: theme.colors.syntaxDefault,
       background: 'transparent',
     },
-    'hljs-keyword': { color: '#FF7B72' },       // Red for keywords
-    'hljs-built_in': { color: '#79C0FF' },     // Blue for built-ins
-    'hljs-type': { color: '#79C0FF' },         // Blue for types
-    'hljs-literal': { color: '#79C0FF' },      // Blue for literals
-    'hljs-number': { color: '#79C0FF' },       // Blue for numbers
-    'hljs-operator': { color: '#FF7B72' },     // Red for operators
-    'hljs-string': { color: '#A5D6FF' },       // Light blue for strings
-    'hljs-regexp': { color: '#7EE787' },       // Green for regex
-    'hljs-comment': { color: '#8B949E' },      // Gray for comments
-    'hljs-function': { color: '#D2A8FF' },     // Purple for functions
-    'hljs-title': { color: '#D2A8FF' },        // Purple for titles
-    'hljs-params': { color: '#C9D1D9' },       // Default for params
-    'hljs-attr': { color: '#7EE787' },         // Green for attributes
-    'hljs-variable': { color: '#FFA657' },     // Orange for variables
-    'hljs-class': { color: '#FFA657' },        // Orange for classes
-  } : {
-    'hljs': {
-      color: '#24292F',
-      background: 'transparent',
-    },
-    'hljs-keyword': { color: '#CF222E' },
-    'hljs-built_in': { color: '#0550AE' },
-    'hljs-type': { color: '#0550AE' },
-    'hljs-literal': { color: '#0550AE' },
-    'hljs-number': { color: '#0550AE' },
-    'hljs-operator': { color: '#CF222E' },
-    'hljs-string': { color: '#0A3069' },
-    'hljs-regexp': { color: '#116329' },
-    'hljs-comment': { color: '#6E7781' },
-    'hljs-function': { color: '#8250DF' },
-    'hljs-title': { color: '#8250DF' },
-    'hljs-params': { color: '#24292F' },
-    'hljs-attr': { color: '#116329' },
-    'hljs-variable': { color: '#953800' },
-    'hljs-class': { color: '#953800' },
+    'hljs-keyword': { color: theme.colors.syntaxKeyword },
+    'hljs-built_in': { color: theme.colors.syntaxOperator },
+    'hljs-type': { color: theme.colors.syntaxOperator },
+    'hljs-literal': { color: theme.colors.syntaxNumber },
+    'hljs-number': { color: theme.colors.syntaxNumber },
+    'hljs-operator': { color: theme.colors.syntaxOperator },
+    'hljs-string': { color: theme.colors.syntaxString },
+    'hljs-regexp': { color: theme.colors.syntaxString },
+    'hljs-comment': { color: theme.colors.syntaxComment },
+    'hljs-function': { color: theme.colors.syntaxFunction },
+    'hljs-title': { color: theme.colors.syntaxFunction },
+    'hljs-params': { color: theme.colors.syntaxDefault },
+    'hljs-attr': { color: theme.colors.syntaxString },
+    'hljs-variable': { color: theme.colors.syntaxClass },
+    'hljs-class': { color: theme.colors.syntaxClass },
   };
 
   return (
@@ -106,7 +87,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language, theme }) =
           style={syntaxStyle}
           highlighter="hljs"
           fontSize={13}
-          fontFamily="Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace"
+          fontFamily={theme.fonts.code || 'monospace'}
           customStyle={{
             backgroundColor: 'transparent',
             padding: 16,

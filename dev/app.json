@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Dark | streamdown-rn",
+    "slug": "streamdown-rn-dev",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "rgb(251, 251, 251)"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.darkresearch.streamdownrndev"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "rgb(251, 251, 251)"
+      },
+      "package": "com.darkresearch.streamdownrndev"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
+

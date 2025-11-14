@@ -1,26 +1,42 @@
 /**
- * Light Theme Configuration
- * For future light mode support
+ * GitHub Light Theme Configuration
+ * Based on GitHub's light theme color palette
  */
 
 import { ThemeConfig } from '../core/types';
 
 export const lightTheme: ThemeConfig = {
   colors: {
-    text: '#1a1a1a',          // Dark text on light background
+    text: '#24292e',          // Dark text on light background
     background: '#ffffff',     // White background
-    border: '#e5e5e5',         // Light border
-    link: '#0066cc',          // Blue links
-    code: '#666666',          // Code text color
-    codeBackground: '#f5f5f5', // Light code background
-    blockquote: '#0066cc',    // Blockquote accent
-    strong: '#000000',        // Bold text - pure black
-    emphasis: '#4a4a4a',      // Italic text - medium gray
+    border: '#e1e4e8',         // Light border
+    link: '#0366d6',          // Blue links
+    code: '#24292e',          // Code text color
+    codeBackground: '#f6f8fa', // Light code background
+    blockquote: '#6a737d',    // Blockquote accent
+    strong: '#24292e',        // Bold text
+    emphasis: '#24292e',      // Italic text
+    // Syntax highlighting colors (GitHub Light)
+    syntaxKeyword: '#cf222e',  // Red for keywords
+    syntaxString: '#0a3069',   // Dark blue for strings
+    syntaxNumber: '#0550ae',   // Blue for numbers
+    syntaxComment: '#6e7781',  // Gray for comments
+    syntaxFunction: '#8250df', // Purple for functions
+    syntaxClass: '#953800',    // Orange for classes
+    syntaxOperator: '#cf222e', // Red for operators
+    syntaxDefault: '#24292f',  // Default text color
+    // Code block UI colors
+    codeBlockBackground: '#f6f8fa',
+    codeBlockBorder: '#e1e4e8',
+    codeBlockHeaderBg: '#f6f8fa',
+    codeBlockHeaderText: '#6e7781',
+    codeBlockCopyButtonBg: '#e1e4e8',
+    codeBlockCopyButtonText: '#24292e',
   },
   fonts: {
-    body: 'Satoshi',          // Main font matching app
-    code: 'Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',  // Monospace font stack (similar to ChatGPT)
-    heading: 'Satoshi',       // Heading font
+    body: undefined,          // Use system default
+    code: 'monospace',        // System monospace
+    heading: undefined,       // Use system default
   },
   spacing: {
     paragraph: 12,            // Space between paragraphs
@@ -36,7 +52,7 @@ export const lightTheme: ThemeConfig = {
 export const lightMarkdownStyles = {
   body: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.body,
+    ...(lightTheme.fonts.body && { fontFamily: lightTheme.fonts.body }),
     fontSize: 16,
     lineHeight: 22,
     flexWrap: 'wrap' as const,
@@ -44,7 +60,7 @@ export const lightMarkdownStyles = {
   },
   heading1: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.heading,
+    ...(lightTheme.fonts.heading && { fontFamily: lightTheme.fonts.heading }),
     fontSize: 24,
     fontWeight: 'bold' as const,
     marginTop: lightTheme.spacing.heading,
@@ -52,7 +68,7 @@ export const lightMarkdownStyles = {
   },
   heading2: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.heading,
+    ...(lightTheme.fonts.heading && { fontFamily: lightTheme.fonts.heading }),
     fontSize: 20,
     fontWeight: 'bold' as const,
     marginTop: lightTheme.spacing.heading,
@@ -60,7 +76,7 @@ export const lightMarkdownStyles = {
   },
   heading3: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.heading,
+    ...(lightTheme.fonts.heading && { fontFamily: lightTheme.fonts.heading }),
     fontSize: 18,
     fontWeight: 'bold' as const,
     marginTop: lightTheme.spacing.heading,
@@ -68,7 +84,7 @@ export const lightMarkdownStyles = {
   },
   heading4: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.heading,
+    ...(lightTheme.fonts.heading && { fontFamily: lightTheme.fonts.heading }),
     fontSize: 16,
     fontWeight: 'bold' as const,
     marginTop: lightTheme.spacing.heading,
@@ -76,7 +92,7 @@ export const lightMarkdownStyles = {
   },
   heading5: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.heading,
+    ...(lightTheme.fonts.heading && { fontFamily: lightTheme.fonts.heading }),
     fontSize: 14,
     fontWeight: 'bold' as const,
     marginTop: lightTheme.spacing.heading,
@@ -84,7 +100,7 @@ export const lightMarkdownStyles = {
   },
   heading6: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.heading,
+    ...(lightTheme.fonts.heading && { fontFamily: lightTheme.fonts.heading }),
     fontSize: 12,
     fontWeight: 'bold' as const,
     marginTop: lightTheme.spacing.heading,
@@ -92,7 +108,7 @@ export const lightMarkdownStyles = {
   },
   paragraph: {
     color: lightTheme.colors.text,
-    fontFamily: lightTheme.fonts.body,
+    ...(lightTheme.fonts.body && { fontFamily: lightTheme.fonts.body }),
     fontSize: 16,
     lineHeight: 22,
     marginBottom: lightTheme.spacing.paragraph,
@@ -120,7 +136,7 @@ export const lightMarkdownStyles = {
   code_inline: {
     color: lightTheme.colors.text,  // Same as regular text
     backgroundColor: 'transparent',  // No background, blend into chat
-    fontFamily: lightTheme.fonts.code,
+    ...(lightTheme.fonts.code && { fontFamily: lightTheme.fonts.code }),
     fontSize: 16,  // Match body text size
     lineHeight: 22,  // Match body line height
     borderWidth: 0,  // No border
@@ -136,7 +152,7 @@ export const lightMarkdownStyles = {
   code_block: {
     color: lightTheme.colors.code,
     backgroundColor: lightTheme.colors.codeBackground,
-    fontFamily: lightTheme.fonts.code,
+    ...(lightTheme.fonts.code && { fontFamily: lightTheme.fonts.code }),
     fontSize: 13,  // Slightly smaller like ChatGPT
     padding: 12,  // More consistent padding
     borderRadius: 6,  // Slightly tighter radius
@@ -147,12 +163,12 @@ export const lightMarkdownStyles = {
   fence: {
     color: lightTheme.colors.code,
     backgroundColor: lightTheme.colors.codeBackground,
-    fontFamily: lightTheme.fonts.code,
+    ...(lightTheme.fonts.code && { fontFamily: lightTheme.fonts.code }),
     fontSize: 13,  // Slightly smaller like ChatGPT
     padding: 12,  // More consistent padding
     borderRadius: 28,  // Rounder corners like ChatGPT
     borderWidth: 1,
-    borderColor: '#e8e8e8',  // Barely lighter than background for subtle border
+    borderColor: lightTheme.colors.codeBlockBorder || lightTheme.colors.border,
     marginVertical: 0,  // No extra spacing - CodeBlock handles its own margins
     overflowX: 'auto' as const,
     maxWidth: '100%',
