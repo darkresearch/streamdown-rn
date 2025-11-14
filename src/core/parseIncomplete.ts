@@ -127,15 +127,66 @@ function hideIncompleteCodeBlockMarkers(text: string): string {
  * Returns the text with incomplete components removed and the buffered component text
  */
 function hideIncompleteComponents(text: string): { cleanText: string; bufferedComponent: string } {
-  // Find the last occurrence of {{component:
-  const lastComponentStart = text.lastIndexOf('{{component:');
+  // Find the last occurrence of {{ (any component start, not just {{component:)
+  const lastComponentStart = text.lastIndexOf('{{');
+  
+  // Check if the last {{ is complete
+  let lastComponentIsComplete = false;
+  
+  if (lastComponentStart !== -1) {
+    const textAfterComponentStart = text.substring(lastComponentStart);
+    
+    // Quick check: does it have closing }}?
+    let braceCount = 0;
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = 0; i < textAfterComponentStart.length; i++) {
+      const char = textAfterComponentStart[i];
+      const nextChar = textAfterComponentStart[i + 1];
+      
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      
+      if (inString) continue;
+      
+      if (char === '{') {
+        braceCount++;
+      } else if (char === '}') {
+        braceCount--;
+        
+        if (braceCount === 1 && nextChar === '}') {
+          lastComponentIsComplete = true;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Hide single trailing { if no unclosed component
+  if (text.endsWith('{') && !text.endsWith('{{') && (lastComponentStart === -1 || lastComponentIsComplete)) {
+    console.log('🚫 Hiding single trailing {');
+    return { cleanText: text.slice(0, -1), bufferedComponent: '{' };
+  }
   
   if (lastComponentStart === -1) {
     // No component syntax found
     return { cleanText: text, bufferedComponent: '' };
   }
   
-  // Check if there's a complete component (closing }}) after the last opening
+  // Re-check completion (we already did this above, but keep for clarity)
   const textAfterComponentStart = text.substring(lastComponentStart);
   
   // Count braces to find matching closing }}
@@ -181,14 +232,16 @@ function hideIncompleteComponents(text: string): { cleanText: string; bufferedCo
   
   if (foundClosing) {
     // Component is complete, don't hide anything
+    console.log('✅ Complete component found, not hiding');
     return { cleanText: text, bufferedComponent: '' };
   }
   
-  // Component is incomplete, hide everything from {{component: onwards
+  // Component is incomplete, hide everything from {{ onwards
   const cleanText = text.substring(0, lastComponentStart);
   const bufferedComponent = text.substring(lastComponentStart);
   
   console.log('🔒 Buffering incomplete component:', {
+    cleanText: cleanText.substring(Math.max(0, cleanText.length - 50)),
     bufferLength: bufferedComponent.length,
     bufferPreview: bufferedComponent.substring(0, 100)
   });
@@ -660,6 +713,8 @@ export function updateIncompleteTagState(
   // Start with current state
   let stack = [...state.stack];
   let tagCounts = { ...state.tagCounts };
+  let inCodeBlock = state.inCodeBlock;
+  let inInlineCode = state.inInlineCode;
   
   // Process each new character
   for (let i = 0; i < newChars.length; i++) {
@@ -681,6 +736,7 @@ export function updateIncompleteTagState(
         // Close the most recent code block
         stack.splice(codeBlockIndex, 1);
         tagCounts.codeBlock--;
+        inCodeBlock = false; // Exit code block context
       } else {
         // Open new code block
         stack.push({
@@ -690,6 +746,7 @@ export function updateIncompleteTagState(
           openingText: newText.slice(Math.max(0, position - 10), position + 13),
         });
         tagCounts.codeBlock++;
+        inCodeBlock = true; // Enter code block context
       }
       i += 2; // Skip next 2 characters
       continue;
@@ -764,6 +821,7 @@ export function updateIncompleteTagState(
           // Close the most recent code
           stack.splice(codeIndex, 1);
           tagCounts.code--;
+          inInlineCode = false; // Exit inline code context
         } else {
           // Open new code
           stack.push({
@@ -773,6 +831,7 @@ export function updateIncompleteTagState(
             openingText: newText.slice(Math.max(0, position - 10), position + 11),
           });
           tagCounts.code++;
+          inInlineCode = true; // Enter inline code context
         }
         continue;
       }
@@ -812,8 +871,8 @@ export function updateIncompleteTagState(
       continue;
     }
     
-    // Links: [
-    if (char === '[') {
+    // Links: [ (but only if NOT in code context)
+    if (char === '[' && !inCodeBlock && !inInlineCode) {
       // Open new link
       stack.push({
         type: 'link',
@@ -843,22 +902,18 @@ export function updateIncompleteTagState(
       continue;
     }
     
-    // Components: {{
-    if (char === '{' && nextChar === '{') {
-      // Check if next chars are 'component:'
-      const ahead = newText.slice(position, position + 12);
-      if (ahead.startsWith('{{component:')) {
-        // Open new component
-        stack.push({
-          type: 'component',
-          position,
-          marker: '{{',
-          openingText: newText.slice(Math.max(0, position - 10), position + 22),
-        });
-        tagCounts.component++;
-        i += 1; // Skip next character
-        continue;
-      }
+    // Components: {{ (but only if NOT in code context)
+    if (char === '{' && nextChar === '{' && !inCodeBlock && !inInlineCode) {
+      // Track ANY {{ as potential component when not in code
+      stack.push({
+        type: 'component',
+        position,
+        marker: '{{',
+        openingText: newText.slice(Math.max(0, position - 10), position + 22),
+      });
+      tagCounts.component++;
+      i += 1; // Skip next character
+      continue;
     }
     
     // Components: closing }}
@@ -885,6 +940,8 @@ export function updateIncompleteTagState(
     earliestPosition,
     previousTextLength: newText.length,
     tagCounts,
+    inCodeBlock,
+    inInlineCode,
   };
 }
 

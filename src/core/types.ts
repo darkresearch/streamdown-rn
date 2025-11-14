@@ -129,6 +129,10 @@ export interface IncompleteTagState {
     link: number;
     component: number;
   };
+  
+  // Code context tracking - are we inside code?
+  inCodeBlock: boolean;
+  inInlineCode: boolean;
 }
 
 /**
@@ -146,6 +150,8 @@ export const INITIAL_INCOMPLETE_STATE: IncompleteTagState = {
     link: 0,
     component: 0,
   },
+  inCodeBlock: false,
+  inInlineCode: false,
 };
 
 /**

@@ -160,11 +160,30 @@ describe('updateIncompleteTagState', () => {
       expect(state.tagCounts.component).toBe(0);
     });
 
-    it('should not track {{ that is not component', () => {
+    it('should track ANY {{ as component when not in code', () => {
       const state = updateIncompleteTagState(INITIAL_INCOMPLETE_STATE, '{{ test');
       
-      expect(state.stack).toHaveLength(0);
+      expect(state.stack).toHaveLength(1);
+      expect(state.stack[0].type).toBe('component');
+      expect(state.tagCounts.component).toBe(1);
+    });
+    
+    it('should NOT track {{ when inside inline code', () => {
+      let state = updateIncompleteTagState(INITIAL_INCOMPLETE_STATE, '`{{ json');
+      
+      // Should have code tag but NO component tag
+      expect(state.tagCounts.code).toBe(1);
       expect(state.tagCounts.component).toBe(0);
+      expect(state.inInlineCode).toBe(true);
+    });
+    
+    it('should NOT track {{ when inside code block', () => {
+      let state = updateIncompleteTagState(INITIAL_INCOMPLETE_STATE, '```\n{{ json');
+      
+      // Should have codeBlock tag but NO component tag
+      expect(state.tagCounts.codeBlock).toBe(1);
+      expect(state.tagCounts.component).toBe(0);
+      expect(state.inCodeBlock).toBe(true);
     });
   });
 
@@ -301,18 +320,38 @@ describe('updateIncompleteTagState', () => {
       expect(state.tagCounts.component).toBe(0);
     });
 
-    it('should track incomplete tag counts', () => {
+    it('should track incomplete tag counts with code context', () => {
+      // Use clearer test case: regular tags, then code block with content that looks like tags
       const state = updateIncompleteTagState(
         INITIAL_INCOMPLETE_STATE,
-        '**bold *italic `code ```block [link {{component:'
+        '**bold** text ```\ncode {{ and [link\n```'
       );
       
-      expect(state.tagCounts.bold).toBe(1);
-      expect(state.tagCounts.italic).toBe(1);
-      expect(state.tagCounts.code).toBe(1);
-      expect(state.tagCounts.codeBlock).toBe(1);
-      expect(state.tagCounts.link).toBe(1);
-      expect(state.tagCounts.component).toBe(1);
+      expect(state.tagCounts.bold).toBe(0); // Closed
+      expect(state.tagCounts.codeBlock).toBe(0); // Closed
+      expect(state.tagCounts.component).toBe(0); // Was inside code block, not tracked
+      expect(state.tagCounts.link).toBe(0); // Was inside code block, not tracked
+      expect(state.inCodeBlock).toBe(false); // Exited after closing
+    });
+    
+    it('should track tags outside code, ignore inside code', () => {
+      const state = updateIncompleteTagState(
+        INITIAL_INCOMPLETE_STATE,
+        '{{comp `{{ in code` {{outside'
+      );
+      
+      expect(state.tagCounts.component).toBe(2); // First and last, middle was in code
+      expect(state.tagCounts.code).toBe(0); // Closed
+    });
+    
+    it('should track component outside code correctly', () => {
+      const state = updateIncompleteTagState(
+        INITIAL_INCOMPLETE_STATE,
+        '**bold** and {{component text'
+      );
+      
+      expect(state.tagCounts.bold).toBe(0); // Closed
+      expect(state.tagCounts.component).toBe(1); // Open, not in code
     });
   });
 });
