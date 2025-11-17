@@ -27,11 +27,15 @@ A minimal Expo-based admin dashboard for visually testing and developing streamd
 ## Features
 
 - **Direct source imports**: Imports `streamdown-rn` directly from `../src` via module resolution (no dependency needed)
-- **Streaming simulation**: Typewriter effect to test streaming behavior
+- **Streaming simulation**: Typewriter effect to test streaming behavior with adjustable speed
+- **Step-by-step debugging**: Pause and use ← → arrows to navigate character-by-character
+- **State debug panel**: Real-time visualization of markdown tag state and component extraction
+- **Component library**: View React source code for all test components
+- **Progressive rendering showcase**: See field-by-field rendering in action
 - **Preset examples**: Quick access to common markdown patterns
-- **Component registry**: Test dynamic component injection
+- **Component registry**: Test dynamic component injection with new compact syntax
 - **Theme toggle**: Switch between dark and light themes
-- **Dark branding**: Matches Dark website colorway (#020202 background, #D7D7D7 text)
+- **JSON cleanup visualization**: See exactly how incomplete JSON is auto-completed
 
 ## How It Works
 
@@ -55,11 +59,38 @@ This means:
 
 ## Testing Components
 
-The dashboard includes example components for testing component injection:
+The dashboard includes progressive rendering example components:
 
-- `TokenCard`: Displays token information
-- `Button`: Simple button component
-- `Badge`: Badge component
+- `TokenCard`: Displays token information with 4 progressive fields (sym, name, price, change)
+- `Button`: Simple button component with progressive label
+- `Badge`: Badge component with progressive text
 
-Use the `withComponents` preset to see component injection in action.
+### New Compact Syntax
+
+Components use the new compact syntax:
+```
+{{c:"TokenCard",p:{"sym":"BTC","name":"Bitcoin","price":45000,"change":2.5}}}
+```
+
+### Progressive Rendering
+
+All test components use the `<Progressive>` framework:
+- Fields render one-by-one as data streams in
+- Missing fields show animated skeleton placeholders
+- Click "Components" button to view source code
+
+### Debug Panel
+
+Click "Debug" to open the enhanced state debug panel showing:
+- **Component Extraction**: Empty/Partial/Complete component status
+- **JSON Cleanup**: See how incomplete JSON is auto-completed
+- **Markdown Tags**: Incomplete tag state and processing boundary
+- **Real-time updates**: Updates as you step through character-by-character
+
+### Streaming Controls
+
+- **Start/Pause/Resume**: Control streaming playback
+- **← →**: Step character-by-character when paused (web only)
+- **Reset**: Reset to full content
+- **Delay**: Adjust ms/character (try 100ms to see progressive rendering clearly)
 
