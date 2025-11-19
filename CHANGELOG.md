@@ -1,5 +1,11 @@
 # streamdown-rn
 
+## 0.1.6
+
+### Patch Changes
+
+- Enhanced fuzz testing, fixed component injection bugs, and improved CI configuration.
+
 ## 0.1.6 (Unreleased)
 
 ### Major Changes
