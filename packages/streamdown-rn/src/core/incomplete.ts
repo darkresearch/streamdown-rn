@@ -22,6 +22,8 @@ export const INITIAL_INCOMPLETE_STATE: IncompleteTagState = {
   earliestPosition: 0,
   inCodeBlock: false,
   inInlineCode: false,
+  inMathBlock: false,
+  inInlineMath: false,
 };
 
 // ============================================================================
@@ -89,6 +91,99 @@ function extractTrailingWhitespace(text: string): { content: string; whitespace:
 }
 
 // ============================================================================
+// Character Classification Helpers (ported from remend)
+// ============================================================================
+
+/**
+ * Unicode-aware word character check.
+ * ASCII fast path for performance, regex fallback for Unicode.
+ * Used for word-internal marker detection (e.g., hello_world should NOT be italic).
+ */
+const UNICODE_WORD_CHAR = /[\p{L}\p{N}_]/u;
+
+function isWordChar(char: string): boolean {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  // ASCII fast path: a-z, A-Z, 0-9, _
+  if (
+    (code >= 48 && code <= 57) ||   // 0-9
+    (code >= 65 && code <= 90) ||   // A-Z
+    (code >= 97 && code <= 122) ||  // a-z
+    code === 95                      // _
+  ) {
+    return true;
+  }
+  return UNICODE_WORD_CHAR.test(char);
+}
+
+/**
+ * Check if a line containing a marker is a horizontal rule.
+ * Horizontal rules are lines with 3+ of the same marker (star, dash, or underscore)
+ * with only optional spaces and tabs between them.
+ */
+function isHorizontalRuleLine(fullText: string, position: number, marker: string): boolean {
+  // Find line start
+  let lineStart = 0;
+  for (let i = position - 1; i >= 0; i--) {
+    if (fullText[i] === '\n') {
+      lineStart = i + 1;
+      break;
+    }
+  }
+  
+  // Find line end
+  let lineEnd = fullText.length;
+  for (let i = position; i < fullText.length; i++) {
+    if (fullText[i] === '\n') {
+      lineEnd = i;
+      break;
+    }
+  }
+  
+  const line = fullText.substring(lineStart, lineEnd);
+  
+  let markerCount = 0;
+  for (const char of line) {
+    if (char === marker) {
+      markerCount++;
+    } else if (char !== ' ' && char !== '\t') {
+      return false; // Non-whitespace, non-marker character
+    }
+  }
+  
+  return markerCount >= 3;
+}
+
+/**
+ * Check if an asterisk at the given position is a list marker.
+ * A list marker is * followed by space/tab at the start of a line (with optional indentation).
+ */
+function isAsteriskListMarker(fullText: string, position: number): boolean {
+  const nextChar = position < fullText.length - 1 ? fullText[position + 1] : '';
+  if (nextChar !== ' ' && nextChar !== '\t') {
+    return false;
+  }
+  
+  // Find start of current line
+  let lineStart = 0;
+  for (let i = position - 1; i >= 0; i--) {
+    if (fullText[i] === '\n') {
+      lineStart = i + 1;
+      break;
+    }
+  }
+  
+  // Check if everything before the * on this line is whitespace
+  for (let i = lineStart; i < position; i++) {
+    if (fullText[i] !== ' ' && fullText[i] !== '\t') {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// ============================================================================
 // State Management
 // ============================================================================
 
@@ -129,6 +224,8 @@ function rebuildTagState(fullText: string): IncompleteTagState {
   let earliestPosition = 0;
   let inCodeBlock = false;
   let inInlineCode = false;
+  let inMathBlock = false;
+  let inInlineMath = false;
   let inComponent = false;  // Track if we're inside a component [{...}]
   let componentBraceDepth = 0;  // Track nested braces inside component
   
@@ -175,6 +272,17 @@ function rebuildTagState(fullText: string): IncompleteTagState {
       continue;
     }
     
+    // === Backslash escape: \* \_ \~ \` \$ \[ \! etc. ===
+    // Skip the next character — it's escaped and not a marker
+    if (fullText[i] === '\\' && i + 1 < fullText.length) {
+      const nextChar = fullText[i + 1];
+      // Only skip if it's escaping a markdown-significant character
+      if ('*_~`$[]!\\'.includes(nextChar)) {
+        i += 2;
+        continue;
+      }
+    }
+    
     // === Component detection: [{ ===
     // When we see [{, we're entering component DSL - skip markdown processing
     if (fullText.slice(i, i + 2) === '[{') {
@@ -207,6 +315,38 @@ function rebuildTagState(fullText: string): IncompleteTagState {
       continue;
     }
     
+    // === Math block: $$ (must check before inline math) ===
+    if (fullText.slice(i, i + 2) === '$$') {
+      if (inMathBlock) {
+        removeTagFromStack(stack, tagCounts, 'mathBlock');
+        inMathBlock = false;
+      } else {
+        earliestPosition = addTagToStack(stack, tagCounts, 'mathBlock', i, '$$', earliestPosition);
+        inMathBlock = true;
+      }
+      i += 2;
+      continue;
+    }
+    
+    // === Inline math: $ ===
+    if (fullText[i] === '$' && !inMathBlock) {
+      if (inInlineMath) {
+        removeTagFromStack(stack, tagCounts, 'inlineMath');
+        inInlineMath = false;
+      } else {
+        earliestPosition = addTagToStack(stack, tagCounts, 'inlineMath', i, '$', earliestPosition);
+        inInlineMath = true;
+      }
+      i++;
+      continue;
+    }
+    
+    // Skip everything inside math blocks (no emphasis processing)
+    if (inMathBlock || inInlineMath) {
+      i++;
+      continue;
+    }
+    
     // === Inline code: ` (single backtick, not part of ```) ===
     if (fullText[i] === '`') {
       if (inInlineCode) {
@@ -226,6 +366,61 @@ function rebuildTagState(fullText: string): IncompleteTagState {
       continue;
     }
     
+    // === Bold underscore: __ (must check before single underscore) ===
+    if (fullText.slice(i, i + 2) === '__') {
+      // Skip word-internal: check char before first _ and after second _
+      const prevChar = i > 0 ? fullText[i - 1] : '';
+      const nextChar = i + 2 < fullText.length ? fullText[i + 2] : '';
+      if (prevChar && nextChar && isWordChar(prevChar) && isWordChar(nextChar)) {
+        i += 2;
+        continue;
+      }
+      
+      const boldUnderIdx = stack.findIndex(t => t.type === 'boldUnderscore');
+      if (boldUnderIdx !== -1) {
+        removeTagFromStack(stack, tagCounts, 'boldUnderscore');
+      } else {
+        earliestPosition = addTagToStack(stack, tagCounts, 'boldUnderscore', i, '__', earliestPosition);
+      }
+      i += 2;
+      continue;
+    }
+    
+    // === Italic underscore: _ (single, not part of __) ===
+    if (fullText[i] === '_') {
+      // Skip word-internal underscores (e.g., hello_world)
+      const prevChar = i > 0 ? fullText[i - 1] : '';
+      const nextChar = i + 1 < fullText.length ? fullText[i + 1] : '';
+      if (prevChar && nextChar && isWordChar(prevChar) && isWordChar(nextChar)) {
+        i++;
+        continue;
+      }
+      
+      const italicUnderIdx = stack.findIndex(t => t.type === 'italicUnderscore');
+      const boldUnderOpen = stack.some(t => t.type === 'boldUnderscore');
+      const isLastChar = i === fullText.length - 1;
+      
+      // SPECIAL CASE: If bold underscore is open, italic is NOT open, and last char,
+      // this _ is likely the start of closing __ (user still typing)
+      if (boldUnderOpen && italicUnderIdx === -1 && isLastChar) {
+        const boldTag = stack.find(t => t.type === 'boldUnderscore');
+        const boldOpenerEnd = boldTag ? boldTag.position + 2 : 0;
+        const hasContentBetween = i > boldOpenerEnd;
+        if (hasContentBetween) {
+          i++;
+          continue;
+        }
+      }
+      
+      if (italicUnderIdx !== -1) {
+        removeTagFromStack(stack, tagCounts, 'italicUnderscore');
+      } else {
+        earliestPosition = addTagToStack(stack, tagCounts, 'italicUnderscore', i, '_', earliestPosition);
+      }
+      i++;
+      continue;
+    }
+    
     // === Bold: ** (must check before italic) ===
     if (fullText.slice(i, i + 2) === '**') {
       const boldIdx = stack.findIndex(t => t.type === 'bold');
@@ -240,6 +435,20 @@ function rebuildTagState(fullText: string): IncompleteTagState {
     
     // === Italic: * (single asterisk, not part of **) ===
     if (fullText[i] === '*') {
+      // Skip if this is a list marker (* followed by space at line start)
+      if (isAsteriskListMarker(fullText, i)) {
+        i++;
+        continue;
+      }
+      
+      // Skip word-internal asterisks (e.g., file*name)
+      const prevChar = i > 0 ? fullText[i - 1] : '';
+      const nextChar = i + 1 < fullText.length ? fullText[i + 1] : '';
+      if (prevChar && nextChar && isWordChar(prevChar) && isWordChar(nextChar)) {
+        i++;
+        continue;
+      }
+      
       const italicIdx = stack.findIndex(t => t.type === 'italic');
       const boldOpen = stack.some(t => t.type === 'bold');
       const isLastChar = i === fullText.length - 1;
@@ -308,6 +517,14 @@ function rebuildTagState(fullText: string): IncompleteTagState {
       continue;
     }
     
+    // === Image: ![alt](url) ===
+    // Track images separately from links. When we see ![ we enter image mode.
+    if (fullText[i] === '!' && fullText[i + 1] === '[') {
+      earliestPosition = addTagToStack(stack, tagCounts, 'image', i, '![', earliestPosition);
+      i += 2; // Skip ![
+      continue;
+    }
+    
     // === Link: [text](url) ===
     // Track link in two phases:
     //   1. Text phase: marker='[' - waiting for ]( 
@@ -321,6 +538,13 @@ function rebuildTagState(fullText: string): IncompleteTagState {
     
     // Transition from text phase to URL phase on ](
     if (fullText[i] === ']' && fullText[i + 1] === '(') {
+      // Check image first, then link
+      const imgIdx = stack.findIndex(t => t.type === 'image' && t.marker === '![');
+      if (imgIdx !== -1) {
+        stack[imgIdx].marker = '](';
+        i += 2;
+        continue;
+      }
       const linkIdx = stack.findIndex(t => t.type === 'link' && t.marker === '[');
       if (linkIdx !== -1) {
         // Transition to URL mode
@@ -330,8 +554,14 @@ function rebuildTagState(fullText: string): IncompleteTagState {
       }
     }
     
-    // Close link on ) when in URL phase
+    // Close link/image on ) when in URL phase
     if (fullText[i] === ')') {
+      const imgIdx = stack.findIndex(t => t.type === 'image' && t.marker === '](');
+      if (imgIdx !== -1) {
+        removeTagFromStack(stack, tagCounts, 'image');
+        i++;
+        continue;
+      }
       const linkIdx = stack.findIndex(t => t.type === 'link' && t.marker === '](');
       if (linkIdx !== -1) {
         removeTagFromStack(stack, tagCounts, 'link');
@@ -350,6 +580,8 @@ function rebuildTagState(fullText: string): IncompleteTagState {
     earliestPosition,
     inCodeBlock,
     inInlineCode,
+    inMathBlock,
+    inInlineMath,
   };
 }
 
@@ -491,6 +723,41 @@ function closeTag(
       // These are handled by hideIncompleteMarkers - don't add anything
       return fixed;
       
+    case 'boldUnderscore':
+      // SPECIAL CASE: If original text ends with single _, complete the __ closer
+      if (isFirstClose && 
+          endsWithPartialMarker(originalText, '_', '__') && 
+          fixed.length === originalLength) {
+        return fixed + '_';
+      }
+      return fixed + '__';
+      
+    case 'italicUnderscore': {
+      const hasUnderContent = fixed.length > tag.position + 1;
+      if (!hasUnderContent) {
+        // No content - use zero-width space to break __ pattern
+        return fixed + '\u200B_';
+      }
+      return fixed + '_';
+    }
+      
+    case 'mathBlock':
+      // Close math block with $$
+      return fixed.endsWith('\n') ? fixed + '$$' : fixed + '\n$$';
+      
+    case 'inlineMath':
+      return fixed + '$';
+      
+    case 'image':
+      // Two phases: text phase (marker='![') and URL phase (marker='](')
+      if (tag.marker === '](') {
+        // In URL phase - just need closing )
+        return fixed + ')';
+      }
+      // In text phase - strip incomplete images (can't show skeleton for images)
+      // Remove everything from the ![ position onward
+      return fixed.slice(0, tag.position);
+      
     case 'link':
       // Two phases: text phase (marker='[') and URL phase (marker='](')
       if (tag.marker === '](') {
@@ -614,6 +881,60 @@ function hideIncompleteMarkers(text: string): string {
     result = result.slice(0, -componentMatch[1].length);
   }
   
+  // === Hide empty underscore formatting ===
+  
+  // Empty bold underscore with zero-width space: "__\u200B__" at end
+  result = result.replace(/(^|[\s\n])__\u200B__$/g, '$1');
+  
+  // Empty italic underscore with zero-width space: "_\u200B_" at end
+  result = result.replace(/(^|[\s\n])_\u200B_$/g, '$1');
+  
+  // Empty bold underscore: "____" at end preceded by whitespace/start
+  result = result.replace(/(^|[\s\n])____$/g, '$1');
+  
+  // Empty italic underscore: "__" at end (only if single occurrence)
+  // This mirrors the ** logic for italic/bold ambiguity
+  const doubleUnderscoreMatches = result.match(/__/g);
+  if (doubleUnderscoreMatches && doubleUnderscoreMatches.length === 1 && /(^|[\s\n])__$/.test(result)) {
+    result = result.replace(/(^|[\s\n])__$/g, '$1');
+  }
+  
+  // Single underscore at end (incomplete italic)
+  result = result.replace(/(^|[\s\n])_$/g, '$1');
+  
+  // === Hide incomplete math ===
+  
+  // Single $ at end (incomplete inline math) — but NOT $$ 
+  // Use negative lookbehind to avoid matching $$ as two single $
+  if (result.endsWith('$') && !result.endsWith('$$')) {
+    result = result.replace(/(^|[\s\n])\$$/g, '$1');
+  }
+  
+  // Empty inline math: "$$" (two single $) at end, only if no other $ in text
+  // This distinguishes empty inline math ($...$) from math block ($$...$$)
+  // We skip this — empty inline code gets "$" hidden above
+  
+  // Empty math block "$$$$" at end (open $$ + close $$ with no content)
+  result = result.replace(/(^|[\s\n])\$\$\$\$$/g, '$1');
+  
+  // Empty math block "$$\n$$" at end (open $$ + newline + close $$ with no content)
+  result = result.replace(/(^|[\s\n])\$\$\n\$\$$/g, '$1');
+  
+  // Lone $$ at end (incomplete math block opening, no content after it)
+  // Only hide if $$ appears exactly once (it's the opening, not a closing)
+  const dollarPairCount = (result.match(/\$\$/g) || []).length;
+  if (dollarPairCount === 1) {
+    result = result.replace(/(^|[\s\n])\$\$$/g, '$1');
+  }
+  
+  // === Hide incomplete images ===
+  
+  // "![" at end - incomplete image opening
+  result = result.replace(/(^|[\s\n])!\[$/g, '$1');
+  
+  // "!" at end followed by nothing (might be start of ![)
+  // Don't hide standalone ! - it's valid text
+  
   // === Hide incomplete links ===
   
   // Empty link with no text: "[](#)" - hide completely
@@ -638,4 +959,7 @@ function hideIncompleteMarkers(text: string): string {
 export const __test__ = {
   hideIncompleteMarkers,
   rebuildTagState,
+  isWordChar,
+  isHorizontalRuleLine,
+  isAsteriskListMarker,
 };
