@@ -101,6 +101,8 @@ export interface IncompleteTagState {
   earliestPosition: number;
   inCodeBlock: boolean;
   inInlineCode: boolean;
+  inMathBlock: boolean;
+  inInlineMath: boolean;
 }
 
 /**
@@ -134,6 +136,8 @@ export const INITIAL_REGISTRY: BlockRegistry = {
     earliestPosition: 0,
     inCodeBlock: false,
     inInlineCode: false,
+    inMathBlock: false,
+    inInlineMath: false,
   },
   cursor: 0,
   blockCounter: 0,

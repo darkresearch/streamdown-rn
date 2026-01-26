@@ -38,7 +38,7 @@ import { ActiveBlock } from './renderers/ActiveBlock';
  * </StreamdownRN>
  * ```
  */
-export const StreamdownRN: React.FC<StreamdownRNProps> = React.memo(({
+export const StreamdownRN = React.memo<StreamdownRNProps>(({
   children,
   componentRegistry,
   theme = 'dark',

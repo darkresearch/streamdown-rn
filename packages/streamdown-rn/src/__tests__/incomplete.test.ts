@@ -598,5 +598,364 @@ describe('Incomplete Markdown Handler', () => {
       expect(fix('[{c:"Button",p:{}}] [link')).toBe('[{c:"Button",p:{}}] [link](#)');
     });
   });
+  
+  describe('Backslash escape awareness', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should not treat escaped asterisks as bold/italic markers', () => {
+      // \* is not a marker
+      expect(fix('\\*not italic')).toBe('\\*not italic');
+      expect(fix('\\*\\*not bold')).toBe('\\*\\*not bold');
+    });
+    
+    it('should not treat escaped underscores as markers', () => {
+      expect(fix('\\_not italic')).toBe('\\_not italic');
+      expect(fix('\\_\\_not bold')).toBe('\\_\\_not bold');
+    });
+    
+    it('should not treat escaped tildes as strikethrough', () => {
+      expect(fix('\\~not strike')).toBe('\\~not strike');
+      expect(fix('\\~\\~not strike')).toBe('\\~\\~not strike');
+    });
+    
+    it('should not treat escaped backticks as code', () => {
+      expect(fix('\\`not code')).toBe('\\`not code');
+    });
+    
+    it('should not treat escaped dollar signs as math', () => {
+      expect(fix('\\$not math')).toBe('\\$not math');
+      expect(fix('\\$\\$not block math')).toBe('\\$\\$not block math');
+    });
+    
+    it('should not treat escaped brackets as links', () => {
+      expect(fix('\\[not a link')).toBe('\\[not a link');
+    });
+    
+    it('should handle escaped marker followed by real marker', () => {
+      // \* then real *italic*
+      expect(fix('\\**italic')).toBe('\\**italic*');
+    });
+    
+    it('should handle backslash before non-marker character normally', () => {
+      // \n is not a markdown escape (n isn't a marker char), so both chars pass through
+      expect(fix('\\n normal')).toBe('\\n normal');
+    });
+  });
+  
+  describe('Word-internal marker detection', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should not treat word-internal asterisks as emphasis', () => {
+      // file*name should not create italic
+      expect(fix('file*name')).toBe('file*name');
+    });
+    
+    it('should not treat word-internal underscores as emphasis', () => {
+      // hello_world should not create italic
+      expect(fix('hello_world')).toBe('hello_world');
+      expect(fix('snake_case_name')).toBe('snake_case_name');
+    });
+    
+    it('should not treat word-internal double underscores as bold', () => {
+      expect(fix('hello__world')).toBe('hello__world');
+    });
+    
+    it('should still treat boundary underscores as emphasis', () => {
+      // _italic_ has underscores at word boundaries
+      expect(fix('_italic')).toBe('_italic_');
+      expect(fix('text _italic')).toBe('text _italic_');
+    });
+    
+    it('should still treat boundary asterisks as emphasis', () => {
+      expect(fix('*italic')).toBe('*italic*');
+      expect(fix('text *italic')).toBe('text *italic*');
+    });
+  });
+  
+  describe('Underscore emphasis support', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should track opening italic underscore', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '_');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('italicUnderscore');
+    });
+    
+    it('should track and close italic underscore', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '_italic_');
+      expect(state.stack.length).toBe(0);
+    });
+    
+    it('should auto-close incomplete italic underscore', () => {
+      expect(fix('_italic')).toBe('_italic_');
+      expect(fix('_italic text')).toBe('_italic text_');
+    });
+    
+    it('should hide empty italic underscore markers', () => {
+      expect(fix('_')).toBe('');
+      expect(fix('text _')).toBe('text ');
+    });
+    
+    it('should track opening bold underscore', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '__');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('boldUnderscore');
+    });
+    
+    it('should track and close bold underscore', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '__bold__');
+      expect(state.stack.length).toBe(0);
+    });
+    
+    it('should auto-close incomplete bold underscore', () => {
+      expect(fix('__bold')).toBe('__bold__');
+      expect(fix('__bold text')).toBe('__bold text__');
+    });
+    
+    it('should hide empty bold underscore markers', () => {
+      expect(fix('__')).toBe('');
+      expect(fix('text __')).toBe('text ');
+    });
+    
+    it('should handle trailing whitespace in underscore emphasis', () => {
+      expect(fix('_italic ')).toBe('_italic_ ');
+      expect(fix('__bold ')).toBe('__bold__ ');
+    });
+    
+    it('should handle nested underscore emphasis', () => {
+      // Bold containing italic
+      expect(fix('__bold _italic')).toBe('__bold _italic___');
+    });
+    
+    it('should handle half-closer for bold underscore', () => {
+      // __bold_ is typing the closing __
+      expect(fix('__bold_')).toBe('__bold__');
+    });
+    
+    it('should stream underscore italic character by character', () => {
+      expect(fix('_')).toBe('');
+      expect(fix('_i')).toBe('_i_');
+      expect(fix('_it')).toBe('_it_');
+      expect(fix('_ita')).toBe('_ita_');
+      expect(fix('_italic')).toBe('_italic_');
+      expect(fix('_italic_')).toBe('_italic_');
+    });
+    
+    it('should stream underscore bold character by character', () => {
+      expect(fix('_')).toBe('');
+      expect(fix('__')).toBe('');
+      expect(fix('__b')).toBe('__b__');
+      expect(fix('__bo')).toBe('__bo__');
+      expect(fix('__bol')).toBe('__bol__');
+      expect(fix('__bold')).toBe('__bold__');
+      expect(fix('__bold_')).toBe('__bold__');
+      expect(fix('__bold__')).toBe('__bold__');
+    });
+  });
+  
+  describe('Math block awareness', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should track math block opening', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$$');
+      expect(state.inMathBlock).toBe(true);
+      expect(state.stack.some(t => t.type === 'mathBlock')).toBe(true);
+    });
+    
+    it('should track math block closing', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$$x^2$$');
+      expect(state.inMathBlock).toBe(false);
+      expect(state.stack.length).toBe(0);
+    });
+    
+    it('should auto-close incomplete math block', () => {
+      expect(fix('$$x^2')).toBe('$$x^2\n$$');
+      expect(fix('$$\nx^2')).toBe('$$\nx^2\n$$');
+    });
+    
+    it('should skip emphasis markers inside math blocks', () => {
+      // ** inside $$ should not be treated as bold
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$$x**2');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('mathBlock');
+      // No bold should be tracked
+      expect(state.tagCounts.bold).toBeUndefined();
+    });
+    
+    it('should skip underscores inside math blocks', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$$x_i');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('mathBlock');
+      expect(state.tagCounts.italicUnderscore).toBeUndefined();
+    });
+    
+    it('should track inline math', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$');
+      expect(state.inInlineMath).toBe(true);
+      expect(state.stack.some(t => t.type === 'inlineMath')).toBe(true);
+    });
+    
+    it('should close inline math', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$x^2$');
+      expect(state.inInlineMath).toBe(false);
+      expect(state.stack.length).toBe(0);
+    });
+    
+    it('should auto-close incomplete inline math', () => {
+      expect(fix('$x^2')).toBe('$x^2$');
+    });
+    
+    it('should skip emphasis inside inline math', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '$x**2');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('inlineMath');
+    });
+    
+    it('should hide empty math markers', () => {
+      expect(fix('$')).toBe('');
+      expect(fix('$$')).toBe('');
+      expect(fix('text $$')).toBe('text ');
+    });
+  });
+  
+  describe('Image handling', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should track image opening', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '![');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('image');
+      expect(state.stack[0].marker).toBe('![');
+    });
+    
+    it('should track image with alt text', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '![alt');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('image');
+    });
+    
+    it('should transition image to URL phase', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '![alt](');
+      expect(state.stack.length).toBe(1);
+      expect(state.stack[0].type).toBe('image');
+      expect(state.stack[0].marker).toBe('](');
+    });
+    
+    it('should close complete image', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '![alt](url)');
+      expect(state.stack.length).toBe(0);
+    });
+    
+    it('should strip incomplete image (text phase)', () => {
+      // Incomplete images are removed - can't show skeleton for images
+      expect(fix('Text ![alt')).toBe('Text ');
+      expect(fix('Text ![')).toBe('Text ');
+    });
+    
+    it('should auto-close image in URL phase', () => {
+      // When we have the URL being typed, close with )
+      expect(fix('![alt](http')).toBe('![alt](http)');
+      expect(fix('![alt](https://example.com')).toBe('![alt](https://example.com)');
+    });
+    
+    it('should preserve complete images', () => {
+      expect(fix('![alt](https://example.com/img.png)')).toBe('![alt](https://example.com/img.png)');
+    });
+    
+    it('should hide empty image opening', () => {
+      expect(fix('![')).toBe('');
+      expect(fix('text ![')).toBe('text ');
+    });
+    
+    it('should stream image character by character', () => {
+      // Simulate streaming "![logo](https://example.com/logo.png)"
+      expect(fix('![')).toBe('');           // Empty - hidden
+      expect(fix('![l')).toBe('');          // Incomplete image stripped
+      expect(fix('![logo')).toBe('');       // Incomplete image stripped
+      expect(fix('![logo](')).toBe('![logo]()');  // URL phase - close with )
+      expect(fix('![logo](h')).toBe('![logo](h)');
+      expect(fix('![logo](https://example.com/logo.png')).toBe('![logo](https://example.com/logo.png)');
+      expect(fix('![logo](https://example.com/logo.png)')).toBe('![logo](https://example.com/logo.png)');
+    });
+  });
+  
+  describe('List marker awareness', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should not treat * at start of line followed by space as italic', () => {
+      // "* item" is a list, not italic
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '* item');
+      expect(state.stack.length).toBe(0);
+      // Should not track italic
+      expect(state.tagCounts.italic).toBeUndefined();
+    });
+    
+    it('should not treat indented * as italic', () => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, '  * item');
+      expect(state.tagCounts.italic).toBeUndefined();
+    });
+    
+    it('should still treat * as italic when not a list marker', () => {
+      // *italic (no space after *, not at line start pattern)
+      expect(fix('*italic')).toBe('*italic*');
+    });
+    
+    it('should handle list items without interfering with inline emphasis', () => {
+      // List item with bold content
+      expect(fix('* **bold')).toBe('* **bold**');
+    });
+  });
+  
+  describe('Mixed new features', () => {
+    const fix = (input: string) => {
+      const state = updateTagState(INITIAL_INCOMPLETE_STATE, input);
+      return fixIncompleteMarkdown(input, state);
+    };
+    
+    it('should handle escaped markers mixed with real ones', () => {
+      // \* then **bold
+      expect(fix('\\* **bold')).toBe('\\* **bold**');
+    });
+    
+    it('should handle math containing underscores and asterisks', () => {
+      // Math formula: $a_i * b_j$ - should not create emphasis
+      expect(fix('$a_i * b_j')).toBe('$a_i * b_j$');
+    });
+    
+    it('should handle underscore emphasis with word-internal underscores', () => {
+      // _italic snake_case_ - the middle _ should be skipped (word internal)
+      expect(fix('_italic snake_case')).toBe('_italic snake_case_');
+    });
+    
+    it('should handle image followed by link', () => {
+      expect(fix('![img](url) [link')).toBe('![img](url) [link](#)');
+    });
+    
+    it('should handle bold asterisk and bold underscore independently', () => {
+      expect(fix('**bold** and __also bold')).toBe('**bold** and __also bold__');
+    });
+    
+    it('should handle inline math followed by emphasis', () => {
+      expect(fix('$E=mc^2$ and **bold')).toBe('$E=mc^2$ and **bold**');
+    });
+  });
 });
 
