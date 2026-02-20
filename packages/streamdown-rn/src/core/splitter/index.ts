@@ -5,14 +5,14 @@ import { logDebug, logStateSnapshot } from './logger';
 import { processLines } from './processLines';
 import { finalizeBlock } from './finalizeBlock';
 
-const SPLITTER_VERSION = 'char-level-v1';
+const SPLITTER_VERSION = 'incremental-v2';
 
 /**
- * Process new content character-by-character.
- * 
- * This ensures consistent block boundary detection regardless of chunk size.
- * Whether content arrives 1 character at a time or 1000 characters at once,
- * block boundaries are detected at the exact character position.
+ * Process new appended content incrementally.
+ *
+ * The splitter operates on the newly appended range and relies on explicit
+ * block-closure index detection (component/code blocks) to preserve
+ * chunk-size-independent boundaries without per-character full rescans.
  */
 export function processNewContent(
   registry: BlockRegistry,
@@ -30,52 +30,25 @@ export function processNewContent(
     return registry;
   }
 
-  // Process each new character individually to ensure consistent
-  // block boundary detection regardless of chunk size
-  let currentRegistry = registry;
-  
-  for (let i = registry.cursor; i < fullText.length; i++) {
-    // Process content up to position i+1 (one character at a time)
-    currentRegistry = processSingleCharacter(currentRegistry, fullText, i + 1);
-  }
-
-  logStateSnapshot('state.after', currentRegistry);
-  return currentRegistry;
-}
-
-/**
- * Process content up to a specific position (single character increment).
- * This is the core of character-level processing.
- */
-function processSingleCharacter(
-  registry: BlockRegistry,
-  fullText: string,
-  endPos: number
-): BlockRegistry {
-  // Only process if we have new content
-  if (endPos <= registry.cursor) {
-    return registry;
-  }
-
-  const newContent = fullText.slice(registry.cursor, endPos);
+  const newContent = fullText.slice(registry.cursor);
   const activeContent = registry.activeBlock
     ? registry.activeBlock.content + newContent
     : newContent;
+  const activeStartPos = registry.activeBlock?.startPos ?? registry.cursor;
   const newTagState = updateTagState(registry.activeTagState, activeContent);
   const lines = activeContent.split('\n');
 
-  // Create a virtual "fullText" that only goes up to endPos
-  // This ensures cursor is set correctly for this character
-  const virtualFullText = fullText.slice(0, endPos);
-
-  return processLines({
+  const currentRegistry = processLines({
     registry,
-    fullText: virtualFullText,
+    fullText,
     lines,
     activeContent,
     tagState: newTagState,
-    activeStartPos: registry.activeBlock?.startPos ?? registry.cursor,
+    activeStartPos,
   });
+
+  logStateSnapshot('state.after', currentRegistry);
+  return currentRegistry;
 }
 
 export function resetRegistry(): BlockRegistry {

@@ -2,7 +2,7 @@ import type { BlockRegistry, IncompleteTagState } from '../types';
 import { INITIAL_INCOMPLETE_STATE, updateTagState } from '../incomplete';
 import { detectBlockType, detectPartialBlockType } from './blockPatterns';
 import { finalizeBlock } from './finalizeBlock';
-import { isCodeBlockClosed, isComponentClosed } from './blockClosers';
+import { findCodeBlockCloseIndex, findComponentCloseIndex } from './blockClosers';
 import { logDebug } from './logger';
 
 interface ProcessArgs {
@@ -33,40 +33,84 @@ function handleExplicitClosingBlocks({
 }: ProcessArgs): BlockRegistry | null {
   const currentType = registry.activeBlock?.type;
   if (currentType === 'codeBlock') {
-    if (isCodeBlockClosed(activeContent)) {
+    const closeIndex = findCodeBlockCloseIndex(activeContent);
+    if (closeIndex !== -1) {
+      const blockContent = activeContent.slice(0, closeIndex);
+      const remainder = activeContent.slice(closeIndex);
       const block = finalizeBlock(
-        activeContent,
+        blockContent,
         'codeBlock',
         registry.blockCounter,
         registry.activeBlock!.startPos
       );
-      return {
+
+      const finalized: BlockRegistry = {
         blocks: [...registry.blocks, block],
         activeBlock: null,
         activeTagState: INITIAL_INCOMPLETE_STATE,
         cursor: fullText.length,
         blockCounter: registry.blockCounter + 1,
       };
+
+      const normalizedRemainder = normalizeBlockContent(
+        remainder,
+        registry.activeBlock!.startPos + closeIndex
+      );
+
+      if (!normalizedRemainder.content.trim()) {
+        return finalized;
+      }
+
+      return processLines({
+        registry: finalized,
+        fullText,
+        lines: normalizedRemainder.content.split('\n'),
+        activeContent: normalizedRemainder.content,
+        tagState: updateTagState(INITIAL_INCOMPLETE_STATE, normalizedRemainder.content),
+        activeStartPos: normalizedRemainder.startPos,
+      });
     }
 
     return updateActiveBlock(registry, activeContent, tagState, fullText);
   }
 
   if (currentType === 'component') {
-    if (isComponentClosed(activeContent)) {
+    const closeIndex = findComponentCloseIndex(activeContent);
+    if (closeIndex !== -1) {
+      const blockContent = activeContent.slice(0, closeIndex);
+      const remainder = activeContent.slice(closeIndex);
       const block = finalizeBlock(
-        activeContent,
+        blockContent,
         'component',
         registry.blockCounter,
         registry.activeBlock!.startPos
       );
-      return {
+
+      const finalized: BlockRegistry = {
         blocks: [...registry.blocks, block],
         activeBlock: null,
         activeTagState: INITIAL_INCOMPLETE_STATE,
         cursor: fullText.length,
         blockCounter: registry.blockCounter + 1,
       };
+
+      const normalizedRemainder = normalizeBlockContent(
+        remainder,
+        registry.activeBlock!.startPos + closeIndex
+      );
+
+      if (!normalizedRemainder.content.trim()) {
+        return finalized;
+      }
+
+      return processLines({
+        registry: finalized,
+        fullText,
+        lines: normalizedRemainder.content.split('\n'),
+        activeContent: normalizedRemainder.content,
+        tagState: updateTagState(INITIAL_INCOMPLETE_STATE, normalizedRemainder.content),
+        activeStartPos: normalizedRemainder.startPos,
+      });
     }
 
     return updateActiveBlock(registry, activeContent, tagState, fullText);
@@ -258,6 +302,16 @@ function handleActiveBlock({
   if (!registry.activeBlock) {
     const { normalizedContent, trimmedChars } =
       trimLeadingWhitespace(activeContent);
+
+    if (!normalizedContent) {
+      return {
+        ...registry,
+        activeBlock: null,
+        activeTagState: INITIAL_INCOMPLETE_STATE,
+        cursor: fullText.length,
+      };
+    }
+
     const normalizedLines = normalizedContent.split('\n');
     
     // Use partial detection for immediate type recognition
