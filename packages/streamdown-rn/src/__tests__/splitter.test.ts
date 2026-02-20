@@ -111,6 +111,17 @@ describe('Block Splitter', () => {
       expect(registry.blocks.length).toBe(1);
       expect(registry.activeBlock).toBeNull();
     });
+
+    it('should split code block and following paragraph in one chunk', () => {
+      const input = '```ts\nconst x = 1;\n```\n\nFollowing paragraph';
+      const registry = processNewContent(INITIAL_REGISTRY, input);
+
+      expect(registry.blocks.length).toBe(1);
+      expect(registry.blocks[0].type).toBe('codeBlock');
+      expect(registry.blocks[0].content).toBe('```ts\nconst x = 1;\n```');
+      expect(registry.activeBlock?.type).toBe('paragraph');
+      expect(registry.activeBlock?.content.trim()).toBe('Following paragraph');
+    });
   });
   
   describe('Component detection', () => {
@@ -381,6 +392,36 @@ describe('Block Splitter', () => {
       registry = INITIAL_REGISTRY;
       registry = processNewContent(registry, '1. ');
       expect(registry.activeBlock?.type).toBe('list');
+    });
+
+    it('should produce identical results for large mixed input regardless of chunk size', () => {
+      const fullInput = [
+        '# Title',
+        '',
+        'Paragraph start ' + 'x'.repeat(3000),
+        '',
+        '[{c:"StatusCard",p:{"title":"Ops","status":"ok"}}]',
+        '',
+        '```js',
+        'const n = 42;',
+        '```',
+        '',
+        'Tail paragraph',
+      ].join('\n');
+
+      const allAtOnce = processNewContent(INITIAL_REGISTRY, fullInput);
+
+      let chunked = INITIAL_REGISTRY;
+      for (let i = 64; i <= fullInput.length; i += 64) {
+        chunked = processNewContent(chunked, fullInput.slice(0, i));
+      }
+      chunked = processNewContent(chunked, fullInput);
+
+      expect(chunked.blocks.length).toBe(allAtOnce.blocks.length);
+      expect(chunked.blocks.map(b => b.type)).toEqual(allAtOnce.blocks.map(b => b.type));
+      expect(chunked.blocks.map(b => b.content)).toEqual(allAtOnce.blocks.map(b => b.content));
+      expect(chunked.activeBlock?.type).toBe(allAtOnce.activeBlock?.type);
+      expect(chunked.activeBlock?.content).toBe(allAtOnce.activeBlock?.content);
     });
   });
 });

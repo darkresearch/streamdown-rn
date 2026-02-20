@@ -74,6 +74,11 @@ describe('Security: URL Sanitization', () => {
       expect(sanitizeURL('wss://evil.com/socket')).toBeNull();
       expect(sanitizeURL('blob:https://evil.com/uuid')).toBeNull();
     });
+
+    it('should block protocol-relative URLs', () => {
+      expect(sanitizeURL('//evil.com/path')).toBeNull();
+      expect(sanitizeURL('\\\\evil.local\\share')).toBeNull();
+    });
   });
 
   describe('allowed protocols', () => {
@@ -171,6 +176,25 @@ describe('Security: Prop Sanitization', () => {
       expect(safe.description).toBe('Some text without URLs');
     });
 
+    it('should sanitize protocol-relative URLs in URL-like keys', () => {
+      const props = { url: '//evil.com/payload', href: '/safe/path' };
+      const safe = sanitizeProps(props);
+      expect(safe.url).toBe('');
+      expect(safe.href).toBe('/safe/path');
+    });
+
+    it('should sanitize URL-like keys even without explicit protocol prefix', () => {
+      const props = {
+        image_url: 'javascript:alert(1)',
+        endpoint: 'https://api.example.com/v1',
+        title: 'Status card',
+      };
+      const safe = sanitizeProps(props);
+      expect(safe.image_url).toBe('');
+      expect(safe.endpoint).toBe('https://api.example.com/v1');
+      expect(safe.title).toBe('Status card');
+    });
+
     it('should preserve primitives', () => {
       const props = { count: 42, active: true, data: null };
       const safe = sanitizeProps(props);
@@ -241,6 +265,12 @@ describe('Security: Full Pipeline Integration', () => {
 
     it('should block data: URLs in component props', () => {
       const input = '[{c:"Image",p:{"src":"data:text/html,<script>alert(1)</script>"}}]';
+      const data = extractComponentData(input);
+      expect(data.props.src).toBe('');
+    });
+
+    it('should block protocol-relative URLs in component props', () => {
+      const input = '[{c:"Image",p:{"src":"//evil.com/tracker.png"}}]';
       const data = extractComponentData(input);
       expect(data.props.src).toBe('');
     });

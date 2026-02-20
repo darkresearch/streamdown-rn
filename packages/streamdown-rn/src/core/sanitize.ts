@@ -52,6 +52,14 @@ export function sanitizeURL(url: string): string | null {
   if (trimmed.length === 0) {
     return null;
   }
+
+  // Block protocol-relative and UNC paths (can bypass protocol allowlists)
+  if (trimmed.startsWith('//') || trimmed.startsWith('\\\\')) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[streamdown-rn] Blocked protocol-relative URL');
+    }
+    return null;
+  }
   
   // Allow relative URLs - they're safe
   if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('./') || trimmed.startsWith('../')) {
@@ -92,6 +100,20 @@ function looksLikeURL(value: string): boolean {
 }
 
 /**
+ * Check if a prop key is likely intended to carry a URL.
+ */
+function isLikelyURLKey(key: string): boolean {
+  return /(?:^|_)(?:url|uri|href|src|link|website|endpoint|avatar|image)(?:$|_)/i.test(key);
+}
+
+/**
+ * Decide whether a prop string should be URL-sanitized.
+ */
+function shouldSanitizeStringProp(key: string, value: string): boolean {
+  return isLikelyURLKey(key) || looksLikeURL(value);
+}
+
+/**
  * Recursively sanitize component props.
  * 
  * Checks all string values that look like URLs and sanitizes them.
@@ -109,8 +131,8 @@ export function sanitizeProps(props: Record<string, unknown>): Record<string, un
   
   for (const [key, value] of Object.entries(props)) {
     if (typeof value === 'string') {
-      // Only check strings that look like URLs
-      if (looksLikeURL(value)) {
+      // Sanitize known URL props and protocol-like strings
+      if (shouldSanitizeStringProp(key, value)) {
         const safeUrl = sanitizeURL(value);
         result[key] = safeUrl ?? '';
       } else {
@@ -122,7 +144,7 @@ export function sanitizeProps(props: Record<string, unknown>): Record<string, un
         if (typeof item === 'object' && item !== null) {
           return sanitizeProps(item as Record<string, unknown>);
         }
-        if (typeof item === 'string' && looksLikeURL(item)) {
+        if (typeof item === 'string' && (isLikelyURLKey(key) || looksLikeURL(item))) {
           return sanitizeURL(item) ?? '';
         }
         return item;
